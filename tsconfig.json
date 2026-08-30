@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "strict": true,
+    "moduleResolution": "Node",
+    "types": ["vitest", "node"]
+  },
+  "include": ["./src/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+
