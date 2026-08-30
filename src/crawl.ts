@@ -40,3 +40,30 @@ export function getFirstParagraphFromHTML(html: string): string {
 
     return fallbackRes;
 }
+
+export function getURLsFromHTML(html: string, baseURL: string): string[] {
+    const dom = new JSDOM(html);
+    const allAnchors = dom.window.document.querySelectorAll('a');
+    let result: string[] = [];
+    if (allAnchors.length > 0) {
+        let anchorLinks: any[] = [];
+        allAnchors.forEach(a => anchorLinks.push(a.getAttribute('href')?.valueOf()));
+        anchorLinks.forEach(al => result.push(new URL(al, baseURL).href));
+    }
+
+    return result;
+}
+
+export function getImagesFromHTML(html: string, baseURL: string): string[] {
+    const dom = new JSDOM(html);
+    const allImages = dom.window.document.querySelectorAll('img');
+    let result: string[] = [];
+    if (allImages.length > 0) {
+        let imageLinks: any[] = [];
+        allImages.forEach(a => imageLinks.push(a.getAttribute('src')?.valueOf()));
+        imageLinks.forEach(al => result.push(new URL(al, baseURL).href));
+    }
+
+    return result;
+}
+

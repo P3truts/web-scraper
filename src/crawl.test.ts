@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { getFirstParagraphFromHTML, getHeadingFromHTML, normalizeURL } from './crawl.js'
+import { getFirstParagraphFromHTML, getHeadingFromHTML, getImagesFromHTML, getURLsFromHTML, normalizeURL } from './crawl.js'
 
 
 // normalize
@@ -186,4 +186,221 @@ test('returns empty when paragraphs are missing from HTML', () => {
   let res = "";
   expect(getFirstParagraphFromHTML(HTML)).toBe(res);
 })
+
+// link
+test("getURLsFromHTML relative", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `<html>
+    <body>
+      <a href="/path/one">
+        <span>Boot.dev</span>
+      </a>
+    </body>
+  </html>`;
+
+  const actual = getURLsFromHTML(inputBody, inputURL);
+  const expected = ["https://crawler-test.com/path/one"];
+
+  expect(actual).toEqual(expected);
+});
+
+test("get multiple URLsFromHTML relative", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `<html>
+    <body>
+      <a href="/path/one">
+        <span>Boot.dev</span>
+      </a>
+      <a href="/path/two">
+        <span>www.boot.dev</span>
+      </a>
+    </body>
+  </html>`;
+
+  const actual = getURLsFromHTML(inputBody, inputURL);
+  const expected = ["https://crawler-test.com/path/one",
+    "https://crawler-test.com/path/two"];
+
+  expect(actual).toEqual(expected);
+});
+
+test("getURLsFromHTML absolute", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `<html>
+  <body>
+    <a href="https://crawler-test.com/path/one">Go to Boot.dev</a>
+  </body>
+</html>`;
+
+  const actual = getURLsFromHTML(inputBody, inputURL);
+  const expected = ["https://crawler-test.com/path/one"];
+
+  expect(actual).toEqual(expected);
+});
+
+test("get multiple URLsFromHTML absolute", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `<html>
+  <body>
+    <a href="https://crawler-test.com/path/one">
+      <span>Boot.dev</span>
+    </a>
+    <a href="https://crawler-test.com/path/two">
+      <span>Boot.dev</span>
+    </a>
+  </body>
+</html>`;
+
+  const actual = getURLsFromHTML(inputBody, inputURL);
+  const expected = ["https://crawler-test.com/path/one", "https://crawler-test.com/path/two"];
+
+  expect(actual).toEqual(expected);
+});
+
+test("get mix URLsFromHTML absolute and relative", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `<html>
+  <body>
+    <a href="https://crawler-test.com/path/one">Go to Boot.dev</a>
+    <a href="/path/two">Go to Boot.dev</a>
+  </body>
+</html>`;
+
+  const actual = getURLsFromHTML(inputBody, inputURL);
+  const expected = ["https://crawler-test.com/path/one", "https://crawler-test.com/path/two"];
+
+  expect(actual).toEqual(expected);
+});
+
+test("getURLsFromHTML base", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `<html>
+  <body>
+    <a href="https://crawler-test.com">Go to Boot.dev</a>
+  </body>
+</html>`;
+
+  const actual = getURLsFromHTML(inputBody, inputURL);
+  const expected = ["https://crawler-test.com/"];
+
+  expect(actual).toEqual(expected);
+});
+
+test("get multiple URLsFromHTML base", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `<html>
+  <body>
+    <a href="https://crawler-test.com">Go to Boot.dev</a>
+    <a href="https://crawler-test2.com">Go to Boot.dev</a>
+  </body>
+</html>`;
+
+  const actual = getURLsFromHTML(inputBody, inputURL);
+  const expected = ["https://crawler-test.com/", "https://crawler-test2.com/"];
+
+  expect(actual).toEqual(expected);
+});
+
+// image
+test("getImagesFromHTML relative", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `<html>
+    <body>
+      <img src="/logo.png" alt="Logo">
+    </body>
+  </html>`;
+
+  const actual = getImagesFromHTML(inputBody, inputURL);
+  const expected = ["https://crawler-test.com/logo.png"];
+
+  expect(actual).toEqual(expected);
+});
+
+test("get multiple ImagesFromHTML relative", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `<html>
+    <body>
+      <img src="/logo.png" alt="Logo">
+      <img src="/logo2.png" alt="Logo">
+    </body>
+  </html>`;
+
+  const actual = getImagesFromHTML(inputBody, inputURL);
+  const expected = ["https://crawler-test.com/logo.png", "https://crawler-test.com/logo2.png"];
+
+  expect(actual).toEqual(expected);
+});
+
+test("getImagesFromHTML absolute", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `<html>
+    <body>
+      <img src="https://crawler-test.com/logo.png" alt="Logo">
+    </body>
+  </html>`;
+
+  const actual = getImagesFromHTML(inputBody, inputURL);
+  const expected = ["https://crawler-test.com/logo.png"];
+
+  expect(actual).toEqual(expected);
+});
+
+test("get multiple ImagesFromHTML absolute", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `<html>
+    <body>
+      <img src="https://crawler-test.com/logo.png" alt="Logo">
+      <img src="https://crawler-test.com/logo2.png" alt="Logo">
+    </body>
+  </html>`;
+
+  const actual = getImagesFromHTML(inputBody, inputURL);
+  const expected = ["https://crawler-test.com/logo.png", "https://crawler-test.com/logo2.png"];
+
+  expect(actual).toEqual(expected);
+});
+
+test("get mix ImagesFromHTML absolute and relative", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `<html>
+    <body>
+      <img src="https://crawler-test.com/logo.png" alt="Logo">
+      <img src="/logo2.png" alt="Logo">
+    </body>
+  </html>`;
+
+  const actual = getImagesFromHTML(inputBody, inputURL);
+  const expected = ["https://crawler-test.com/logo.png", "https://crawler-test.com/logo2.png"];
+
+  expect(actual).toEqual(expected);
+});
+
+test("getImagesFromHTML base", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `<html>
+    <body>
+      <img src="https://crawler-test.com/" alt="Logo">
+    </body>
+  </html>`;
+
+  const actual = getImagesFromHTML(inputBody, inputURL);
+  const expected = ["https://crawler-test.com/"];
+
+  expect(actual).toEqual(expected);
+});
+
+test("get multiple ImagesFromHTML base", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `<html>
+    <body>
+      <img src="https://crawler-test.com/" alt="Logo">
+      <img src="https://crawler-test2.com/" alt="Logo">
+    </body>
+  </html>`;
+
+  const actual = getImagesFromHTML(inputBody, inputURL);
+  const expected = ["https://crawler-test.com/", "https://crawler-test2.com/"];
+
+  expect(actual).toEqual(expected);
+});
 
