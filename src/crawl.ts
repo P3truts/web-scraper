@@ -1,6 +1,23 @@
 import { URL } from "node:url";
 import { JSDOM } from "jsdom";
 
+
+export async function getHTML(url: string) {
+    try {
+        const headers = { "User-Agent": "WebCrawler/1.0" };
+        const resp = await fetch(url, { headers: headers });
+        if (!resp.ok) {
+            throw new Error(`Response status: ${resp.status}`);
+        } else if (!resp.headers.get("Content-Type")?.includes("text/html")) {
+            throw new Error("Domain content type not 'text/html'!");
+        }
+
+        return resp.text();
+    } catch (error) {
+        console.log(error);
+    }
+}
+
 export function normalizeURL(UrlString: string): string {
     const url = new URL(UrlString);
     if (url.pathname.endsWith("/")) {
