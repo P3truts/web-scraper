@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { getFirstParagraphFromHTML, getHeadingFromHTML, getImagesFromHTML, getURLsFromHTML, normalizeURL } from './crawl.js'
+import { extractPageData, getFirstParagraphFromHTML, getHeadingFromHTML, getImagesFromHTML, getURLsFromHTML, normalizeURL } from './crawl.js'
 
 
 // normalize
@@ -352,7 +352,8 @@ test("get multiple ImagesFromHTML absolute", () => {
       <img src="https://crawler-test.com/logo.png" alt="Logo">
       <img src="https://crawler-test.com/logo2.png" alt="Logo">
     </body>
-  </html>`;
+  </html>
+  `;
 
   const actual = getImagesFromHTML(inputBody, inputURL);
   const expected = ["https://crawler-test.com/logo.png", "https://crawler-test.com/logo2.png"];
@@ -400,6 +401,79 @@ test("get multiple ImagesFromHTML base", () => {
 
   const actual = getImagesFromHTML(inputBody, inputURL);
   const expected = ["https://crawler-test.com/", "https://crawler-test2.com/"];
+
+  expect(actual).toEqual(expected);
+});
+
+// page data
+test('extractPageData basic', () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `
+    <html><body>
+      <h1>Test Title</h1>
+      <p>This is the first paragraph.</p>
+      <a href="/link1">Link 1</a>
+      <img src="/image1.jpg" alt="Image 1">
+    </body></html>
+  `;
+
+  const actual = extractPageData(inputBody, inputURL);
+  const expected = {
+    url: "https://crawler-test.com",
+    heading: "Test Title",
+    firstParagraph: "This is the first paragraph.",
+    outgoingLinks: ["https://crawler-test.com/link1"],
+    imageURLs: ["https://crawler-test.com/image1.jpg"],
+  };
+
+  expect(actual).toEqual(expected);
+});
+
+test("extractPageData multiple", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `
+    <html><body>
+      <h1>Test Title</h1>
+      <h1>Test Title</h1>
+      <main>
+        <p>This is the first paragraph.</p>
+      </main>
+      <p>This is the second paragraph.</p>
+      <a href="/link1">Link 1</a>
+      <a href="/link2">Link 2</a>
+      <img src="/image1.jpg" alt="Image 1">
+      <img src="/image2.jpg" alt="Image 2">
+    </body></html>
+  `;
+
+  const actual = extractPageData(inputBody, inputURL);
+  const expected = {
+    url: "https://crawler-test.com",
+    heading: "Test Title, Test Title",
+    firstParagraph: "This is the first paragraph.",
+    outgoingLinks: ["https://crawler-test.com/link1", "https://crawler-test.com/link2"],
+    imageURLs: ["https://crawler-test.com/image1.jpg", "https://crawler-test.com/image2.jpg"],
+  };
+
+  expect(actual).toEqual(expected);
+});
+
+test("extractPageData missing", () => {
+  const inputURL = "https://crawler-test.com";
+  const inputBody = `
+    <html>
+      <body>
+      </body>
+    </html>`;
+
+  const actual = extractPageData(inputBody, inputURL);
+  const expected = {
+    url: "https://crawler-test.com",
+    heading: "",
+    firstParagraph: "",
+    outgoingLinks: [],
+    imageURLs: [],
+  };
 
   expect(actual).toEqual(expected);
 });

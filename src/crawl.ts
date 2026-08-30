@@ -67,3 +67,22 @@ export function getImagesFromHTML(html: string, baseURL: string): string[] {
     return result;
 }
 
+export function extractPageData(html: string, pageURL: string): ExtractedPageData {
+    const pageData = {} as ExtractedPageData;
+    pageData.url = pageURL;
+    pageData.heading = getHeadingFromHTML(html);
+    pageData.firstParagraph = getFirstParagraphFromHTML(html);
+    pageData.outgoingLinks = getURLsFromHTML(html, pageURL);
+    pageData.imageURLs = getImagesFromHTML(html, pageURL);
+
+    return pageData;
+}
+
+// interfaces
+interface ExtractedPageData {
+    url: string,
+    heading: string,
+    firstParagraph: string,
+    outgoingLinks: string[],
+    imageURLs: string[]
+}
