@@ -1,6 +1,58 @@
 import { URL } from "node:url";
 import { JSDOM } from "jsdom";
+import { ConcurrentCrawler } from "./concrawl";
 
+
+export async function crawlSiteAsync(baseURL: string, maxConcurrency: number): Promise<Record<string, number>> {
+    let pages: Record<string, number> = {};
+    const concurrentCrawler = new ConcurrentCrawler(baseURL, pages, maxConcurrency);
+
+    return await concurrentCrawler.crawl();
+}
+
+export async function crawlPage(baseURL: string, currentURL: string = baseURL,
+    pages: Record<string, number> = {}) {
+    try {
+        const base = new URL(baseURL);
+        const current = new URL(currentURL);
+        if (base.origin !== current.origin) {
+            console.log('CurrentURL is on a different domain than BaseURL, returning...');
+            return pages;
+        }
+    } catch (error) {
+        console.log('An error has occurred checking base vs current URLs: ', error);
+        return pages;
+    }
+
+    const normalizedCurrentUrl = normalizeURL(currentURL);
+    if (normalizedCurrentUrl in pages) {
+        console.log('Incrementing: ', normalizedCurrentUrl);
+        pages[normalizedCurrentUrl] += 1;
+        console.log('value: ', pages[normalizedCurrentUrl]);
+        return pages;
+    } else {
+        pages[normalizedCurrentUrl] = 1;
+    }
+
+    try {
+        console.log('getting html from: ', currentURL);
+        const html = await getHTML(currentURL);
+        console.log(html);
+        if (html !== undefined) {
+            console.log('getting urls...');
+            const urls = getURLsFromHTML(html, currentURL);
+            console.log(urls);
+            for (let url of urls) {
+                console.log('crawling: ', url);
+                await crawlPage(baseURL, url, pages);
+            }
+        }
+    } catch (error) {
+        console.log("An error has occurred: ", error);
+    }
+
+    return pages;
+}
 
 export async function getHTML(url: string) {
     try {

@@ -1,0 +1,98 @@
+import pLimit from 'p-limit';
+import { getURLsFromHTML, normalizeURL } from './crawl';
+
+
+export class ConcurrentCrawler {
+    private baseURL: string;
+    private pages: Record<string, number>;
+    private limit: any;
+
+    public constructor(baseURL: string, pages: Record<string, number>, maxConcurrency: number) {
+        this.baseURL = baseURL;
+        this.pages = pages;
+        this.limit = pLimit(maxConcurrency);
+    }
+
+    async crawl(): Promise<Record<string, number>> {
+        await this.crawlPage(this.baseURL);
+
+        return this.pages;
+    }
+
+    private addPageVisit(normalizedURL: string): boolean {
+        if (normalizedURL in this.pages) {
+            console.log('Incrementing concurrently: ', normalizedURL);
+            this.pages[normalizedURL] += 1;
+            console.log('value: ', this.pages[normalizedURL]);
+            return false;
+        } else {
+            this.pages[normalizedURL] = 1;
+            return true;
+        }
+    }
+
+    private async getHTML(url: string) {
+        return await this.limit(async () => {
+            try {
+                const headers = { "User-Agent": "WebCrawler/1.0" };
+                const resp = await fetch(url, { headers: headers });
+                if (!resp.ok) {
+                    throw new Error(`Response status: ${resp.status}`);
+                } else if (!resp.headers.get("Content-Type")?.includes("text/html")) {
+                    throw new Error("Domain content type not 'text/html'!");
+                }
+
+                return resp.text();
+            } catch (error) {
+                console.log(error);
+            }
+        });
+    }
+
+    private async crawlPage(currentURL: string): Promise<void> {
+        try {
+            const base = new URL(this.baseURL);
+            const current = new URL(currentURL);
+            if (base.origin !== current.origin) {
+                console.log('CurrentURL is on a different domain than BaseURL, returning...');
+                return;
+            }
+        } catch (error) {
+            console.log('An error has occurred checking base vs current URLs: ', error);
+            return;
+        }
+
+        const normalizedCurrentUrl = normalizeURL(currentURL);
+        let isNewPage = this.addPageVisit(normalizedCurrentUrl);
+        if (!isNewPage) {
+            return;
+        }
+
+        try {
+            console.log('getting html from: ', currentURL);
+            const html = await this.getHTML(currentURL);
+            console.log(html);
+            if (html !== undefined) {
+                console.log('getting urls...');
+                const urls = getURLsFromHTML(html, currentURL);
+                console.log(urls);
+                // for (let url of urls) {
+                //     console.log('crawling: ', url);
+                //     await this.crawlPage(url);
+                // }
+                Promise.all(urls).then(values => {
+                    for (let value of values) {
+                        console.log('crawling: ', value);
+                        this.crawlPage(value);
+                    }
+                }).catch((error) => {
+                    console.log('An error has occured: ', error);
+                });
+            }
+        } catch (error) {
+            console.log("An error has occurred: ", error);
+        }
+
+        return;
+    }
+}

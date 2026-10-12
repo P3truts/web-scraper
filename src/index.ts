@@ -1,9 +1,9 @@
 import { argv } from "node:process";
-import { getHTML } from "./crawl";
+import { crawlPage, crawlSiteAsync, getHTML } from "./crawl";
 
 
 async function main() {
-    console.log(argv.length);
+    //console.log(argv.length);
     if (argv.length < 3) {
         throw Error("Invalid argument - base URL is required!");
     } else if (argv.length > 3) {
@@ -12,8 +12,11 @@ async function main() {
     const url = argv[2];
     console.log("Crawler runs on domain: ", url);
 
-    const html = await getHTML(url);
-    console.log(html);
+    // const html = await getHTML(url);
+    //console.log(html);
+
+    //await crawlPage(url);
+    await crawlSiteAsync(url, 10);
 }
 
 main();
