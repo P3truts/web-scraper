@@ -3,8 +3,8 @@ import { JSDOM } from "jsdom";
 import { ConcurrentCrawler } from "./concrawl";
 
 
-export async function crawlSiteAsync(baseURL: string, maxConcurrency: number, maxPages: number): Promise<Record<string, number>> {
-    let pages: Record<string, number> = {};
+export async function crawlSiteAsync(baseURL: string, maxConcurrency: number, maxPages: number): Promise<Record<string, ExtractedPageData>> {
+    let pages: Record<string, ExtractedPageData> = {};
     const concurrentCrawler = new ConcurrentCrawler(baseURL, pages, maxConcurrency, maxPages);
 
     return await concurrentCrawler.crawl();
@@ -148,7 +148,7 @@ export function extractPageData(html: string, pageURL: string): ExtractedPageDat
 }
 
 // interfaces
-interface ExtractedPageData {
+export interface ExtractedPageData {
     url: string,
     heading: string,
     firstParagraph: string,

@@ -1,5 +1,5 @@
 import { argv } from "node:process";
-import { crawlPage, crawlSiteAsync, getHTML } from "./crawl";
+import { crawlPage, crawlSiteAsync, ExtractedPageData, getHTML } from "./crawl";
 
 
 async function main() {
@@ -25,7 +25,13 @@ async function main() {
     //console.log(html);
 
     //await crawlPage(url);
-    await crawlSiteAsync(url, Number(maxConc), Number(maxPages));
+    const pages = await crawlSiteAsync(url, Number(maxConc), Number(maxPages));
+
+    console.log("Finished crawling.");
+    const firstPage = Object.values(pages)[0];
+    if (firstPage) {
+        console.log(`First page record: ${firstPage["url"]} - ${firstPage["heading"]}`,);
+    }
 }
 
 main();

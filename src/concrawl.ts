@@ -1,19 +1,19 @@
 import pLimit from 'p-limit';
-import { getURLsFromHTML, normalizeURL } from './crawl';
+import { ExtractedPageData, extractPageData, normalizeURL } from './crawl';
 
 
 export class ConcurrentCrawler {
     private baseURL: string;
-    private pages: Record<string, number>;
+    private pages: Record<string, ExtractedPageData>;
     private limit: any;
     private maxPages: number;
     private shouldStop: boolean;
     private allTasks: Set<Promise<void>>;
     private visited: Set<string>;
 
-    public constructor(baseURL: string, pages: Record<string, number>, maxConcurrency: number,
-        maxPages: number) {
-        this.baseURL = baseURL; 5
+    public constructor(baseURL: string, pages: Record<string, ExtractedPageData>,
+        maxConcurrency: number, maxPages: number) {
+        this.baseURL = baseURL;
         this.pages = pages;
         this.limit = pLimit(maxConcurrency);
         this.maxPages = maxPages;
@@ -22,7 +22,7 @@ export class ConcurrentCrawler {
         this.visited = new Set<string>;
     }
 
-    async crawl(): Promise<Record<string, number>> {
+    async crawl(): Promise<Record<string, ExtractedPageData>> {
         await this.crawlPage(this.baseURL);
 
         return this.pages;
@@ -33,13 +33,10 @@ export class ConcurrentCrawler {
             return false;
         } else if (this.visited.size === this.maxPages) {
             console.log('Incrementing concurrently: ', normalizedURL);
-            // this.pages[normalizedURL] += 1;
-            // console.log('value: ', this.pages[normalizedURL]);
             this.shouldStop = true;
             console.log("Reached maximum number of pages to crawl.");
             return false;
         } else {
-            // this.pages[normalizedURL] = 1;
             this.visited.add(normalizedURL);
             return true;
         }
@@ -93,28 +90,40 @@ export class ConcurrentCrawler {
             console.log(html);
             if (html !== undefined) {
                 console.log('getting urls...');
-                const urls = getURLsFromHTML(html, currentURL);
-                console.log(urls);
-                // for (let url of urls) {
-                //     console.log('crawling: ', url);
-                //     await this.crawlPage(url);
-                // }
-                Promise.all(urls).then(values => {
-                    for (let value of values) {
-                        if (this.shouldStop) {
-                            console.log("Reached a loop crawling stop limit.");
-                            return;
-                        }
-                        console.log('crawling: ', value);
-                        const crawlTask = this.crawlPage(value);
-                        this.allTasks.add(crawlTask);
-                        crawlTask.finally(() => {
-                            this.allTasks.delete(crawlTask);
-                        });
-                    }
-                }).catch((error) => {
-                    console.log('An error has occured: ', error);
-                });
+                const data = extractPageData(html, currentURL);
+                this.pages[normalizedCurrentUrl] = data;
+                // const urls = getURLsFromHTML(html, currentURL);
+                // console.log(urls);
+
+                // Promise.all(data.outgoingLinks).then(values => {
+                //     for (let value of values) {
+                //         // if (this.shouldStop) {
+                //         //     console.log("Reached a loop crawling stop limit.");
+                //         //     return;
+                //         // }
+                //         console.log('crawling: ', value);
+                //         const crawlTask = this.crawlPage(value);
+                //         this.allTasks.add(crawlTask);
+                //         crawlTask.finally(() => {
+                //             this.allTasks.delete(crawlTask);
+                //         });
+                //     }
+                // }).catch((error) => {
+                //     console.log('An error has occured: ', error);
+                // });
+
+                const crawlPromises: Promise<void>[] = [];
+
+                for (const nextURL of data.outgoingLinks) {
+                    if (this.shouldStop) break;
+
+                    const task = this.crawlPage(nextURL);
+                    this.allTasks.add(task);
+                    task.finally(() => this.allTasks.delete(task));
+                    crawlPromises.push(task);
+                }
+
+                await Promise.all(crawlPromises);
             }
         } catch (error) {
             console.log("An error has occurred: ", error);
