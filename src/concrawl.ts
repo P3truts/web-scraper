@@ -6,11 +6,20 @@ export class ConcurrentCrawler {
     private baseURL: string;
     private pages: Record<string, number>;
     private limit: any;
+    private maxPages: number;
+    private shouldStop: boolean;
+    private allTasks: Set<Promise<void>>;
+    private visited: Set<string>;
 
-    public constructor(baseURL: string, pages: Record<string, number>, maxConcurrency: number) {
-        this.baseURL = baseURL;
+    public constructor(baseURL: string, pages: Record<string, number>, maxConcurrency: number,
+        maxPages: number) {
+        this.baseURL = baseURL; 5
         this.pages = pages;
         this.limit = pLimit(maxConcurrency);
+        this.maxPages = maxPages;
+        this.shouldStop = false;
+        this.allTasks = new Set<Promise<void>>;
+        this.visited = new Set<string>;
     }
 
     async crawl(): Promise<Record<string, number>> {
@@ -20,13 +29,18 @@ export class ConcurrentCrawler {
     }
 
     private addPageVisit(normalizedURL: string): boolean {
-        if (normalizedURL in this.pages) {
+        if (this.shouldStop || normalizedURL in this.visited) {
+            return false;
+        } else if (this.visited.size === this.maxPages) {
             console.log('Incrementing concurrently: ', normalizedURL);
-            this.pages[normalizedURL] += 1;
-            console.log('value: ', this.pages[normalizedURL]);
+            // this.pages[normalizedURL] += 1;
+            // console.log('value: ', this.pages[normalizedURL]);
+            this.shouldStop = true;
+            console.log("Reached maximum number of pages to crawl.");
             return false;
         } else {
-            this.pages[normalizedURL] = 1;
+            // this.pages[normalizedURL] = 1;
+            this.visited.add(normalizedURL);
             return true;
         }
     }
@@ -50,6 +64,11 @@ export class ConcurrentCrawler {
     }
 
     private async crawlPage(currentURL: string): Promise<void> {
+        if (this.shouldStop) {
+            console.log("Reached a crawling stop limit.");
+            return;
+        }
+
         try {
             const base = new URL(this.baseURL);
             const current = new URL(currentURL);
@@ -82,8 +101,16 @@ export class ConcurrentCrawler {
                 // }
                 Promise.all(urls).then(values => {
                     for (let value of values) {
+                        if (this.shouldStop) {
+                            console.log("Reached a loop crawling stop limit.");
+                            return;
+                        }
                         console.log('crawling: ', value);
-                        this.crawlPage(value);
+                        const crawlTask = this.crawlPage(value);
+                        this.allTasks.add(crawlTask);
+                        crawlTask.finally(() => {
+                            this.allTasks.delete(crawlTask);
+                        });
                     }
                 }).catch((error) => {
                     console.log('An error has occured: ', error);

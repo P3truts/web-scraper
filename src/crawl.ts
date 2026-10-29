@@ -3,9 +3,9 @@ import { JSDOM } from "jsdom";
 import { ConcurrentCrawler } from "./concrawl";
 
 
-export async function crawlSiteAsync(baseURL: string, maxConcurrency: number): Promise<Record<string, number>> {
+export async function crawlSiteAsync(baseURL: string, maxConcurrency: number, maxPages: number): Promise<Record<string, number>> {
     let pages: Record<string, number> = {};
-    const concurrentCrawler = new ConcurrentCrawler(baseURL, pages, maxConcurrency);
+    const concurrentCrawler = new ConcurrentCrawler(baseURL, pages, maxConcurrency, maxPages);
 
     return await concurrentCrawler.crawl();
 }
